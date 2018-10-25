@@ -1,0 +1,18 @@
+.header {
+  margin-top: 10vw;
+}
+
+.signin.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.signin.container div {
+  min-width: 300px;
+}
+
+.btn {
+  margin-top: 20px;
+}
