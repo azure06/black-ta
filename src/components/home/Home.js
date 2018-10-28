@@ -59,32 +59,13 @@ class Home extends Component {
     subcategory: '',
   };
 
-  componentWillUpdate(nextProps, nextState) {
-    console.error(this.props.csrfToken);
-    if (this.props.csrfToken || true) {
-      fetch('https://www.tamgr.com/IBS/retrieveDailyAttendanceProjectTasks', {
-        method: 'POST',
-        // mode: 'no-cors',
-        cache: 'no-cache',
-        credentials: 'include',
-        headers: {
-          'Access-Control-Max-Age': 200,
-          'Content-Type': 'application/json; charset=utf-8',
-          'X-CSRF-TOKEN':
-            this.props.csrfToken || '1809bb26-c5e6-4fcb-b4b7-fda67ad4d3e3',
-        },
-        body: '2018-10-22T15:00:00.000Z',
-      }).then(result => {
-        console.error(result);
-      });
-    }
+  componentDidMount(nextProps, nextState) {
+    console.error(this.props.data);
   }
 
   handleChange = event => {
     this.setState({ [event.target.name]: event.target.value });
   };
-
-  //         {/* <Redirect to="/signin" /> */}
 
   render() {
     const { classes } = this.props;

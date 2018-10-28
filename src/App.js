@@ -6,6 +6,7 @@ import Signin from './components/signin/Signin';
 import Navigation from './components/navigation/Navigation';
 import blue from '@material-ui/core/colors/blue';
 import red from '@material-ui/core/colors/red';
+import { Redirect } from 'react-router-dom';
 const { ipcRenderer } = window.require('electron');
 
 const theme = createMuiTheme({
@@ -20,14 +21,16 @@ const theme = createMuiTheme({
 
 class App extends Component {
   state = {
-    csrfToken: '',
+    data: null,
     value: 0,
   };
 
   componentDidMount() {
-    ipcRenderer.on('csrf-token', (event, csrfToken) => {
-      console.error(csrfToken);
-      this.csrfToken = csrfToken;
+    ipcRenderer.on('project-data', (event, data) => {
+      console.error(data);
+      this.setState({
+        data,
+      });
     });
   }
 
@@ -43,12 +46,13 @@ class App extends Component {
             <Switch>
               <Route
                 exact
-                path="/"
+                path="/home"
                 render={props => (
-                  <Home {...props} csrfToken={this.state.csrfToken} />
+                  <Home {...props} data={this.state.data} />
                 )}
               />
               <Route exact path="/signin" component={Signin} />
+              <Redirect to="/signin" />
             </Switch>
           </div>
         </BrowserRouter>

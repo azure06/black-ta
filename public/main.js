@@ -43,16 +43,28 @@ function createView() {
       view.webContents
         .executeJavaScript(
           `new Promise((resolve, reject) => {
-            resolve(document.querySelector("meta[name='_csrf']").content);
+            const csrfToken = document.querySelector("meta[name='_csrf']").content;
+            fetch('https://www.tamgr.com/IBS/retrieveDailyAttendanceProjectTasks', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+              },
+              body: JSON.stringify(new Date('2018-10-22T15:00:00.000Z'))
+            }).then(response => { 
+              const data = response.json();
+              resolve(data);
+            });
         })`,
         )
         .then(result => {
           console.log('Token: ', result);
-          session.defaultSession.cookies.get({}, (error, cookies) => {
-            console.log(error, cookies);
-          });
+          // session.defaultSession.cookies.get({}, (error, cookies) => {
+          //   console.log(error, cookies);
+          // });
 
-          mainWindow.webContents.send('csrf-token', result);
+          mainWindow.webContents.send('project-data', result);
         })
         .catch(error => {
           console.error('Token Error: ', error);
