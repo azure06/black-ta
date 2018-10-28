@@ -1,4 +1,10 @@
-const { app, ipcMain, BrowserView, BrowserWindow } = require('electron');
+const {
+  app,
+  ipcMain,
+  session,
+  BrowserView,
+  BrowserWindow,
+} = require('electron');
 const path = require('path');
 const url = require('url');
 const isDev = require('electron-is-dev');
@@ -25,7 +31,7 @@ function createView() {
     },
   });
   mainWindow.setBrowserView(view);
-  view.setBounds({ x: 0, y: 0, width: 100, height: 200 });
+  view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
   view.webContents.loadURL('https://www.tamgr.com/IBS/login');
   view.webContents.on('did-finish-load', () => {
     view.webContents.insertCSS('html, body { display: hidden !important; }');
@@ -42,6 +48,11 @@ function createView() {
         )
         .then(result => {
           console.log('Token: ', result);
+          session.defaultSession.cookies.get({}, (error, cookies) => {
+            console.log(error, cookies);
+          });
+
+          mainWindow.webContents.send('csrf-token', result);
         })
         .catch(error => {
           console.error('Token Error: ', error);
