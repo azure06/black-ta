@@ -2,8 +2,12 @@ import React, { Component } from 'react';
 import { StyledButton } from './../styled-components/StyledComponents';
 import TextField from '@material-ui/core/TextField';
 import { withStyles } from '@material-ui/core/styles';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import './Signin.css';
+import { Z_FIXED } from 'zlib';
 const electron = window.require('electron');
+const Store = window.require('electron-store');
+const store = new Store();
 const ipcRenderer = electron.ipcRenderer;
 
 const styles = {
@@ -33,13 +37,42 @@ const styles = {
       boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
     },
   },
+  spinner: {
+    position: 'fixed',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(230,230,230, 0.50)',
+    minWidth: 'unset !important',
+    borderRadius: '50%',
+    width: '150px',
+    height: '150px',
+  },
 };
 
 class Signin extends Component {
   state = {
     emailAddress: '',
     password: '',
+    connecting: false,
   };
+
+  componentDidMount() {
+    const credentials = store.get('credentials');
+    if (credentials) {
+      this.setState({
+        emailAddress: credentials.emailAddress,
+        password: credentials.password,
+      });
+    }
+
+    ipcRenderer.on('logged-in', (event, data) => {
+      this.setState({
+        connecting: false,
+      });
+      this.props.history.push('/home');
+    });
+  }
 
   handleChange = name => event => {
     this.setState({
@@ -48,6 +81,9 @@ class Signin extends Component {
   };
 
   signIn = event => {
+    this.setState({
+      connecting: true,
+    });
     ipcRenderer.send('credentials', {
       ...this.state,
     });
@@ -92,6 +128,13 @@ class Signin extends Component {
             Signin
           </StyledButton>
         </div>
+        {this.state.connecting ? (
+          <div className={this.props.classes.spinner}>
+            <CircularProgress size={100} />
+          </div>
+        ) : (
+          <div />
+        )}
       </div>
     );
   }

@@ -31,46 +31,7 @@ function createView() {
     },
   });
   mainWindow.setBrowserView(view);
-  view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-  view.webContents.loadURL('https://www.tamgr.com/IBS/login');
-  view.webContents.on('did-finish-load', () => {
-    view.webContents.insertCSS('html, body { display: hidden !important; }');
-  });
-
-  view.webContents.on('did-navigate', (event, url) => {
-    view.webContents.insertCSS('html, body { display: hidden !important; }');
-    if (url === 'https://www.tamgr.com/IBS/work-condition') {
-      view.webContents
-        .executeJavaScript(
-          `new Promise((resolve, reject) => {
-            const csrfToken = document.querySelector("meta[name='_csrf']").content;
-            fetch('https://www.tamgr.com/IBS/retrieveDailyAttendanceProjectTasks', {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-              },
-              body: JSON.stringify(new Date('2018-10-22T15:00:00.000Z'))
-            }).then(response => { 
-              const data = response.json();
-              resolve(data);
-            });
-        })`,
-        )
-        .then(result => {
-          console.log('Token: ', result);
-          // session.defaultSession.cookies.get({}, (error, cookies) => {
-          //   console.log(error, cookies);
-          // });
-
-          mainWindow.webContents.send('project-data', result);
-        })
-        .catch(error => {
-          console.error('Token Error: ', error);
-        });
-    }
-  });
+  view.setBounds({ x: 600, y: 0, width: 0, height: 0 });
 }
 
 app.on('ready', createWindow);
@@ -87,20 +48,57 @@ app.on('activate', () => {
   }
 });
 
-ipcMain.on('credentials', (evenet, { emailAddress, password }) => {
+// Login
+ipcMain.on('credentials', (event, { emailAddress, password }) => {
+  view.webContents.loadURL('https://www.tamgr.com/IBS/login');
+  view.webContents.on('did-finish-load', () => {
+    view.webContents
+      .executeJavaScript(
+        `new Promise((resolve, reject) => {
+    document.getElementsByName("username")[0].value = "${emailAddress.trim()}"
+    document.getElementsByName("password")[0].value = "${password.trim()}"
+    document.getElementById("login_form").submit();
+    resolve();
+})`,
+      )
+      .catch(error => {
+        console.error('Submit Error: ', error);
+      });
+  });
+
+  view.webContents.on('did-navigate', (event, url) => {
+    view.webContents.insertCSS('html, body { display: hidden !important; }');
+    if (url === 'https://www.tamgr.com/IBS/work-condition') {
+      mainWindow.webContents.send('logged-in', { emailAddress, password });
+    }
+  });
+});
+
+// Retrieve daily attendance
+ipcMain.on('retrieve-daily-attendance-project-tasks', evenet => {
   view.webContents
     .executeJavaScript(
       `new Promise((resolve, reject) => {
-      document.getElementsByName("username")[0].value = "${emailAddress.trim()}"
-      document.getElementsByName("password")[0].value = "${password.trim()}"
-      document.getElementById("login_form").submit();
-      resolve();
-})`,
+        const csrfToken = document.querySelector("meta[name='_csrf']").content;
+        fetch('https://www.tamgr.com/IBS/retrieveDailyAttendanceProjectTasks', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+          },
+          body: JSON.stringify(new Date())
+        }).then(response => { 
+          const data = response.json();
+          resolve(data);
+        });
+    })`,
     )
     .then(result => {
-      console.log('Submit', result);
+      console.log('Token: ', result);
+      mainWindow.webContents.send('project-data', result);
     })
     .catch(error => {
-      console.error('Submit Error: ', error);
+      console.error('Token Error: ', error);
     });
 });

@@ -8,6 +8,8 @@ import blue from '@material-ui/core/colors/blue';
 import red from '@material-ui/core/colors/red';
 import { Redirect } from 'react-router-dom';
 const { ipcRenderer } = window.require('electron');
+const Store = window.require('electron-store');
+const store = new Store();
 
 const theme = createMuiTheme({
   palette: {
@@ -21,15 +23,17 @@ const theme = createMuiTheme({
 
 class App extends Component {
   state = {
-    data: null,
-    value: 0,
+    isLoggedIn: false,
   };
 
   componentDidMount() {
-    ipcRenderer.on('project-data', (event, data) => {
-      console.error(data);
-      this.setState({
-        data,
+    ipcRenderer.on('logged-in', (event, { emailAddress, password }) => {
+      this.isLoggedIn = true;
+      store.set({
+        credentials: {
+          emailAddress,
+          password,
+        },
       });
     });
   }
@@ -44,13 +48,7 @@ class App extends Component {
           <div>
             <Navigation />
             <Switch>
-              <Route
-                exact
-                path="/home"
-                render={props => (
-                  <Home {...props} data={this.state.data} />
-                )}
-              />
+              <Route exact path="/home" render={props => <Home {...props} />} />
               <Route exact path="/signin" component={Signin} />
               <Redirect to="/signin" />
             </Switch>
