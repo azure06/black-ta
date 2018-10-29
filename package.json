@@ -13,7 +13,8 @@
     "react-dom": "^16.6.0",
     "react-router-dom": "^4.3.1",
     "react-scripts": "2.0.5",
-    "wait-on": "^3.1.0"
+    "wait-on": "^3.1.0",
+    "xlsx": "^0.14.0"
   },
   "devDependencies": {
     "concurrently": "^4.0.1",
