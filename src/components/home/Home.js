@@ -9,6 +9,7 @@ import Select from '@material-ui/core/Select';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
+import Timesheet from './Timesheet';
 
 /* from app code, require('electron').remote calls back to main process */
 const electron = window.require('electron');
@@ -30,7 +31,6 @@ const styles = theme => ({
     display: 'flex',
     justifyContent: 'center',
     flexDirection: 'column',
-    backgroundColor: 'rgba(250,250,250,1)',
     margin: '2vw 2.5vw 0 2.5vw',
     borderRadius: '5px',
     height: 45,
@@ -46,6 +46,9 @@ const styles = theme => ({
     margin: '2vw 2.5vw 0 2.5vw',
     textAlign: 'right',
   },
+  table: {
+    margin: '2vw 2.5vw 0 2.5vw',
+  },
 });
 
 class Home extends Component {
@@ -55,6 +58,7 @@ class Home extends Component {
     taskId: '',
     middleTaskId: '',
     lowerTaskId: '',
+    excelData: [],
   };
 
   componentDidMount(nextProps, nextState) {
@@ -66,7 +70,7 @@ class Home extends Component {
     });
   }
 
-  importExcelData() {
+  importExcelData = () => {
     /* show a file-open dialog and read the first selected file */
     const o = dialog.showOpenDialog({ properties: ['openFile'] });
     if (!o) return;
@@ -76,14 +80,36 @@ class Home extends Component {
 
     const result = {};
 
-    Object.keys(data).map(key => {
+    Object.keys(data).forEach(key => {
       const w = data[key].w;
-      !result[key.substring(1)]
-        ? (result[key.substring(1)] = [{ [key]: w }])
-        : result[key.substring(1)].push({ [key]: w });
+      result[key.substring(1)] = Object.assign(
+        { [key]: w },
+        result[key.substring(1)],
+      );
     });
-    console.error(result);
-  }
+
+    const filteredArray = [];
+
+    Object.keys(result).forEach((key, index) => {
+      if (Object.keys(result[key]).length !== 3) return;
+      const date = result[key][`A${key}`];
+      const workStartTime = `${result[key][`B${key}`]} ${
+        result[key][`A${key}`]
+      }`;
+      const workEndTime = `${result[key][`C${key}`]} ${result[key][`A${key}`]}`;
+      const tmp = [
+        new Date(date),
+        new Date(workStartTime),
+        new Date(workEndTime),
+      ];
+
+      if (tmp.every(d => !isNaN(d))) {
+        filteredArray.push(tmp);
+      }
+
+      this.setState({ excelData: filteredArray });
+    });
+  };
 
   handleChange = (event, type) => {
     if (type === 'project') {
@@ -233,6 +259,11 @@ class Home extends Component {
             </Select>
           </FormControl>
         </form>
+
+        <div className={classes.table}>
+          <Timesheet excelData={this.state.excelData} />
+        </div>
+
         <div className={this.props.classes.btn}>
           <StyledButton
             variant="contained"
