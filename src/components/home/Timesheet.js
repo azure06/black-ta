@@ -23,6 +23,9 @@ function Timesheet(props) {
   const { classes, excelData } = props;
   console.error(props);
   const rows = excelData.map((data, id) => [id, ...data]);
+  const addZero = value => {
+    return ('0' + value).slice(-2);
+  };
 
   return (
     <Paper className={classes.root}>
@@ -31,6 +34,7 @@ function Timesheet(props) {
           <TableRow>
             <TableCell>Day</TableCell>
             <TableCell>Start time</TableCell>
+            <TableCell>Launch time</TableCell>
             <TableCell>End time</TableCell>
           </TableRow>
         </TableHead>
@@ -39,14 +43,19 @@ function Timesheet(props) {
             return (
               <TableRow key={row[1]}>
                 <TableCell component="th" scope="row">
-                  {`${row[1].getFullYear()}/${row[1].getMonth() +
-                    1}/${row[1].getDate()}`}
+                  {`${row[1].getFullYear()}/${addZero(row[1].getMonth() +
+                    1)}/${addZero(row[1].getDate())}`}
                 </TableCell>
                 <TableCell>
-                  {`${row[2].getHours()}:${row[2].getMinutes()}`}
+                  {`${addZero(row[2].getHours())}:${addZero(
+                    row[2].getMinutes(),
+                  )}`}
                 </TableCell>
+                <TableCell>{'13:00 ~ 14:00'}</TableCell>
                 <TableCell>
-                  {`${row[3].getHours()}:${row[3].getMinutes()}`}
+                  {`${addZero(row[3].getHours())}:${addZero(
+                    row[3].getMinutes(),
+                  )}`}
                 </TableCell>
               </TableRow>
             );

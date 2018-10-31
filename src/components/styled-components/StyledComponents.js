@@ -13,7 +13,7 @@ function styled(Component) {
     function StyledComponent(props) {
       const { classes, className, ...other } = props;
       return (
-        <Component className={classNames(classes.root, className)} {...other} />
+        <Component color="primary" className={classNames(classes.root, className)} {...other} />
       );
     }
     StyledComponent.propTypes = {
@@ -30,13 +30,13 @@ function styled(Component) {
 
 // You can even write CSS with https://github.com/cssinjs/jss-template.
 export const StyledButton = styled(Button)({
-  background:
-    'linear-gradient(45deg, rgba(0, 137, 255) 30%, rgba(0, 177, 210) 90%)',
+  // background:
+  // 'linear-gradient(45deg, rgba(0, 137, 255) 30%, rgba(0, 177, 210) 90%)',
   borderRadius: 3,
   border: 0,
   color: 'white',
   height: 40,
   minWidth: 150,
   padding: '0 30px',
-  boxShadow: '0 3px 5px 2px rgba(0, 135, 215, .25)',
+  // boxShadow: '0 3px 5px 2px rgba(0, 135, 215, .25)',
 });

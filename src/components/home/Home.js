@@ -34,20 +34,21 @@ const styles = theme => ({
     margin: '2vw 2.5vw 0 2.5vw',
     borderRadius: '5px',
     height: 45,
-    '&>div': {
+    div: {
       padding: '20px',
     },
   },
-  btn: {
-    marginTop: '20px',
-    textAlign: 'center',
-  },
-  btnRight: {
+  btnContainer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
     margin: '2vw 2.5vw 0 2.5vw',
     textAlign: 'right',
   },
+  btnRight: {
+    marginRight: '10px',
+  },
   table: {
-    margin: '2vw 2.5vw 0 2.5vw',
+    margin: '2vw 2.5vw 1vw 2.5vw',
   },
 });
 
@@ -129,6 +130,7 @@ class Home extends Component {
 
   render() {
     const { classes } = this.props;
+    console.error(classes);
     const { projectTaskReference } = this.state.data || {
       projectTaskReference: [],
     };
@@ -154,15 +156,17 @@ class Home extends Component {
             </Typography>
           </Toolbar>
         </AppBar>
-        <div className={this.props.classes.btnRight}>
-          <StyledButton
-            variant="contained"
-            size="large"
-            onClick={this.importExcelData}
-            color="primary"
-          >
-            Import excel data
-          </StyledButton>
+        <div className={classes.btnContainer}>
+          <div className={classes.btnRight}>
+            <StyledButton variant="contained" onClick={this.importExcelData}>
+              Import excel data
+            </StyledButton>
+          </div>
+          <div className={classes.btnRight}>
+            <StyledButton variant="contained" onClick={this.save}>
+              Save
+            </StyledButton>
+          </div>
         </div>
         <form autoComplete="off">
           <FormControl className={classes.formControl}>
@@ -262,17 +266,6 @@ class Home extends Component {
 
         <div className={classes.table}>
           <Timesheet excelData={this.state.excelData} />
-        </div>
-
-        <div className={this.props.classes.btn}>
-          <StyledButton
-            variant="contained"
-            size="large"
-            onClick={this.signIn}
-            color="primary"
-          >
-            Submit
-          </StyledButton>
         </div>
       </div>
     );
