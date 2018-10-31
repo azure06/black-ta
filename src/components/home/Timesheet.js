@@ -21,7 +21,6 @@ const styles = theme => ({
 
 function Timesheet(props) {
   const { classes, excelData } = props;
-  console.error(props);
   const rows = excelData.map((data, id) => [id, ...data]);
   const addZero = value => {
     return ('0' + value).slice(-2);

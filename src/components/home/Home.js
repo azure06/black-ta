@@ -27,16 +27,29 @@ const styles = theme => ({
       fontWeight: '500',
     },
   },
+  mainContainer: {
+    display: 'flex',
+    alignContent: 'stretch',
+    margin: '2vw',
+    boxShadow:
+      '0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.14), 0px 1px 10px 0px rgba(0, 0, 0, 0.12)',
+  },
+  form: {
+    backgroundColor: 'rgba(248,248,248,1)',
+    padding: '5vw 2vw 5vw 2vw',
+    display: 'flex',
+    justifyContent: 'flex-start',
+    flexDirection: 'column',
+    width: '25vw',
+  },
   formControl: {
     display: 'flex',
-    justifyContent: 'center',
-    flexDirection: 'column',
-    margin: '2vw 2.5vw 0 2.5vw',
     borderRadius: '5px',
-    height: 45,
-    div: {
-      padding: '20px',
-    },
+    margin: '0 0 2vw 0',
+    height: 40,
+  },
+  inputControl: {
+    fontWeight: 500,
   },
   btnContainer: {
     display: 'flex',
@@ -48,7 +61,11 @@ const styles = theme => ({
     marginRight: '10px',
   },
   table: {
-    margin: '2vw 2.5vw 1vw 2.5vw',
+    backgroundColor: 'white',
+    margin: '0 2.5vw 0 2.5vw',
+    paddingBottom: '2.5vw',
+    width: '70vw',
+    borderRadius: '5px',
   },
 });
 
@@ -65,6 +82,7 @@ class Home extends Component {
   componentDidMount(nextProps, nextState) {
     ipcRenderer.send('retrieve-daily-attendance-project-tasks', {});
     ipcRenderer.on('project-data', (event, data) => {
+      console.error(data);
       this.setState({
         data,
       });
@@ -128,9 +146,56 @@ class Home extends Component {
     }, 0);
   };
 
+  save = () => {
+    const dailyAttendance = this.state.excelData.map(item => {
+      const [date, workStartTime, workEndTime] = item;
+      const breakTimeStart = new Date(date);
+      const breakTimeEnd = new Date(date);
+      breakTimeStart.setHours(date.getHours() + 13);
+      breakTimeEnd.setHours(date.getHours() + 14);
+      return {
+        dailyAttendance: {
+          userId: null,
+          companyCode: null,
+          workDate: date.getTime(),
+          workStartTime: workStartTime.getTime(),
+          workEndTime: workEndTime.getTime(),
+          shift: { shiftId: null },
+          breaktimes: [
+            {
+              breakTimeStart: breakTimeStart.getTime(),
+              breakTimeEnd: workEndTime.getTime(),
+              serialNumber: 1,
+            },
+          ],
+          projectsAndTasks: [
+            {
+              loggedHours: [
+                {
+                  projectCode: this.state.projectCode || null,
+                  taskId: this.state.middleTaskId || null,
+                  taskDate: date.toJSON(),
+                  newSerialNumber: 1,
+                  upperTaskId: this.state.taskId || null,
+                  effort: (workEndTime - workStartTime) / 1000 / 60 - 60,
+                  remarks: '',
+                  changed: 'false',
+                },
+              ],
+              projectCode: this.state.projectCode || null,
+            },
+          ],
+        },
+        requestType: 'request-approval-all',
+      };
+    });
+
+    console.error(dailyAttendance);
+    ipcRenderer.send('request-daily-attendance', dailyAttendance);
+  };
+
   render() {
     const { classes } = this.props;
-    console.error(classes);
     const { projectTaskReference } = this.state.data || {
       projectTaskReference: [],
     };
@@ -168,104 +233,105 @@ class Home extends Component {
             </StyledButton>
           </div>
         </div>
-        <form autoComplete="off">
-          <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="project-select">Project</InputLabel>
-            <Select
-              value={this.state.projectCode}
-              onChange={event => this.handleChange(event, 'project')}
-              inputProps={{
-                name: 'projectCode',
-                id: 'project-select',
-              }}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {projectTaskReference.map(ref => {
-                return (
-                  <MenuItem
-                    value={ref.project.projectCode}
-                    key={ref.project.projectCode}
-                  >
-                    {ref.project.projectDescription}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
-          <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="task-select">Task</InputLabel>
-            <Select
-              value={this.state.taskId}
-              onChange={event => this.handleChange(event, 'task')}
-              inputProps={{
-                name: 'taskId',
-                id: 'task-select',
-              }}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {project.allTasks.map(task => {
-                return (
-                  <MenuItem value={task.taskId} key={task.taskId}>
-                    {task.taskDescription}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
-          <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="category-select">Category</InputLabel>
-            <Select
-              onClose={this.handleClose}
-              onOpen={this.handleOpen}
-              value={this.state.middleTaskId}
-              onChange={event => this.handleChange(event, 'middle-task')}
-              inputProps={{
-                name: 'middleTaskId',
-                id: 'demo-controlled-open-select',
-              }}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {task.middleTasks.map(middleTask => {
-                return (
-                  <MenuItem value={middleTask.taskId} key={middleTask.taskId}>
-                    {middleTask.taskDescription}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
-          <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="subcategory-select">Sub-category</InputLabel>
-            <Select
-              value={this.state.lowerTaskId}
-              onChange={event => this.handleChange(event, 'lower-task')}
-              inputProps={{
-                name: 'lowerTaskId',
-                id: 'subcategory-select',
-              }}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {middleTask.lowerTasks.map(lowerTask => {
-                return (
-                  <MenuItem value={lowerTask.taskId} key={lowerTask.taskId}>
-                    {lowerTask.taskDescription}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
-        </form>
-
-        <div className={classes.table}>
-          <Timesheet excelData={this.state.excelData} />
+        <div className={classes.mainContainer}>
+          <form className={classes.form} autoComplete="off">
+            <FormControl className={classes.formControl}>
+              <InputLabel htmlFor="project-select">Project</InputLabel>
+              <Select
+                value={this.state.projectCode}
+                onChange={event => this.handleChange(event, 'project')}
+                inputProps={{
+                  name: 'projectCode',
+                  id: 'project-select',
+                }}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {projectTaskReference.map(ref => {
+                  return (
+                    <MenuItem
+                      value={ref.project.projectCode}
+                      key={ref.project.projectCode}
+                    >
+                      {ref.project.projectDescription}
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+            <FormControl className={classes.formControl}>
+              <InputLabel htmlFor="task-select">Task</InputLabel>
+              <Select
+                value={this.state.taskId}
+                onChange={event => this.handleChange(event, 'task')}
+                inputProps={{
+                  name: 'taskId',
+                  id: 'task-select',
+                }}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {project.allTasks.map(task => {
+                  return (
+                    <MenuItem value={task.taskId} key={task.taskId}>
+                      {task.taskDescription}
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+            <FormControl className={classes.formControl}>
+              <InputLabel htmlFor="category-select">Category</InputLabel>
+              <Select
+                onClose={this.handleClose}
+                onOpen={this.handleOpen}
+                value={this.state.middleTaskId}
+                onChange={event => this.handleChange(event, 'middle-task')}
+                inputProps={{
+                  name: 'middleTaskId',
+                  id: 'demo-controlled-open-select',
+                }}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {task.middleTasks.map(middleTask => {
+                  return (
+                    <MenuItem value={middleTask.taskId} key={middleTask.taskId}>
+                      {middleTask.taskDescription}
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+            <FormControl className={classes.formControl}>
+              <InputLabel htmlFor="subcategory-select">Sub-category</InputLabel>
+              <Select
+                value={this.state.lowerTaskId}
+                onChange={event => this.handleChange(event, 'lower-task')}
+                inputProps={{
+                  name: 'lowerTaskId',
+                  id: 'subcategory-select',
+                }}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {middleTask.lowerTasks.map(lowerTask => {
+                  return (
+                    <MenuItem value={lowerTask.taskId} key={lowerTask.taskId}>
+                      {lowerTask.taskDescription}
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+          </form>
+          <div className={classes.table}>
+            <Timesheet excelData={this.state.excelData} />
+          </div>
         </div>
       </div>
     );

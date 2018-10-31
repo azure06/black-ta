@@ -35,8 +35,6 @@ export const StyledButton = styled(Button)({
   borderRadius: 3,
   border: 0,
   color: 'white',
-  height: 40,
-  minWidth: 150,
   padding: '0 30px',
   // boxShadow: '0 3px 5px 2px rgba(0, 135, 215, .25)',
 });
