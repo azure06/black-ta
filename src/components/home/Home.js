@@ -125,7 +125,6 @@ class Home extends Component {
       if (tmp.every(d => !isNaN(d))) {
         filteredArray.push(tmp);
       }
-
       this.setState({ excelData: filteredArray });
     });
   };
@@ -142,7 +141,7 @@ class Home extends Component {
     }
     this.setState({ [event.target.name]: event.target.value });
     setTimeout(() => {
-      console.error(this.state);
+      console.log('State change', this.state);
     }, 0);
   };
 
@@ -190,7 +189,6 @@ class Home extends Component {
       };
     });
 
-    console.error(dailyAttendance);
     ipcRenderer.send('request-daily-attendance', dailyAttendance);
   };
 

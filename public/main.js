@@ -116,7 +116,7 @@ ipcMain.on('retrieve-daily-attendance-project-tasks', evenet => {
 // Request daily attendance
 ipcMain.on('request-daily-attendance', (event, data) => {
   const promises = data.map(item => {
-    console.error(item);
+    console.error(JSON.stringify(new Date(item.dailyAttendance.workDate)));
     view.webContents
       .executeJavaScript(
         `new Promise((resolve, reject) => {
@@ -128,7 +128,7 @@ ipcMain.on('request-daily-attendance', (event, data) => {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': csrfToken,
           },
-          body: ${new Date(item.dailyAttendance.workDate).toJSON()},
+          body: JSON.stringify(new Date(${item.dailyAttendance.workDate})),
         }).then(response => {
           resolve(response.json());
         });
