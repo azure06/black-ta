@@ -105,7 +105,6 @@ ipcMain.on('retrieve-daily-attendance-project-tasks', evenet => {
       });`,
     )
     .then(result => {
-      console.log('Result: ', result);
       mainWindow.webContents.send('project-data', result);
     })
     .catch(error => {
@@ -116,12 +115,11 @@ ipcMain.on('retrieve-daily-attendance-project-tasks', evenet => {
 // Request daily attendance
 ipcMain.on('request-daily-attendance', (event, data) => {
   const promises = data.map(item => {
-    console.error(JSON.stringify(new Date(item.dailyAttendance.workDate)));
     view.webContents
       .executeJavaScript(
         `new Promise((resolve, reject) => {
         const csrfToken = document.querySelector("meta[name='_csrf']").content;
-        fetch('https://www.tamgr.com/IBS/retrieveDailyAttendanceProjectTasks', {
+        fetch('https://www.tamgr.com/IBS/retrieveDailyAttendance', {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -135,7 +133,46 @@ ipcMain.on('request-daily-attendance', (event, data) => {
       });`,
       )
       .then(result => {
-        console.error('result', result);
+        const {
+          dailyAttendance: {
+            userId,
+            companyCode,
+            shift: { shiftId },
+            approvalCondition,
+          },
+        } = result;
+
+        // if (approvalCondition !== 0) return;
+
+        return Object.assign({}, item.dailyAttendance, {
+          userId,
+          companyCode,
+          shift: { shiftId },
+        });
+      })
+      .then(item => {
+        console.error(item);
+        view.webContents.executeJavaScript(
+          `new Promise((resolve, reject) => {
+        const csrfToken = document.querySelector("meta[name='_csrf']").content;
+        fetch('https://www.tamgr.com/IBS/requestApproval', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+          },
+          body: JSON.stringify(${item}),
+        }).then(response => {
+          resolve(response.json());
+        }).catch(error => {
+          reject(error);
+        });
+      });`,
+        );
+      })
+      .then(result => {
+        console.error(result);
       })
       .catch(error => {
         console.error('Error: ', error);
