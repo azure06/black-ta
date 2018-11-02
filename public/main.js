@@ -38,14 +38,18 @@ function createView() {
     },
   });
   mainWindow.setBrowserView(view);
-  view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+  view.setBounds({ x: 0, y: 0, width: 700, height: 500 });
   view.webContents.loadURL('https://www.tamgr.com/IBS/login');
 
-  view.webContents.on('did-finish-load', resolver);
+  view.webContents.on('did-finish-load', () => {
+    // view.webContents.toggleDevTools();
+    resolver();
+  });
   view.webContents.on('did-navigate', (event, url) => {
     // After login
     if (url === 'https://www.tamgr.com/IBS/work-condition') {
       afterLogin();
+      view.webContents.toggleDevTools();
     }
   });
 }
@@ -101,6 +105,8 @@ ipcMain.on('retrieve-daily-attendance-project-tasks', evenet => {
           body: JSON.stringify(new Date()),
         }).then(response => {
           resolve(response.json());
+        }).catch(error => {
+          reject(error);
         });
       });`,
     )
@@ -114,68 +120,81 @@ ipcMain.on('retrieve-daily-attendance-project-tasks', evenet => {
 
 // Request daily attendance
 ipcMain.on('request-daily-attendance', (event, data) => {
-  const promises = data.map(item => {
-    view.webContents
-      .executeJavaScript(
-        `new Promise((resolve, reject) => {
-        const csrfToken = document.querySelector("meta[name='_csrf']").content;
-        fetch('https://www.tamgr.com/IBS/retrieveDailyAttendance', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
-          },
-          body: JSON.stringify(new Date(${item.dailyAttendance.workDate})),
-        }).then(response => {
-          resolve(response.json());
-        });
-      });`,
-      )
-      .then(result => {
-        const {
-          dailyAttendance: {
-            userId,
-            companyCode,
-            shift: { shiftId },
-            approvalCondition,
-          },
-        } = result;
+  const promises = data.map(item => approve(item));
 
-        // if (approvalCondition !== 0) return;
+  Promise.all(promises)
+    .then(result => {
+      console.log(result);
+    })
+    .catch(error => {
+      console.error('Error: ', error);
+    })
+    .finally();
+});
 
-        return Object.assign({}, item.dailyAttendance, {
+const approve = item =>
+  view.webContents
+    .executeJavaScript(
+      `new Promise((resolve, reject) => {
+    const csrfToken = document.querySelector("meta[name='_csrf']").content;
+    fetch('https://www.tamgr.com/IBS/retrieveDailyAttendance', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+      },
+      body: JSON.stringify(new Date(${item.dailyAttendance.workDate})),
+    }).then(response => {
+      resolve(response.json());
+    }).catch(error => {
+      reject(error);
+    });
+  });`,
+    )
+    .then(result => {
+      const {
+        dailyAttendance: {
           userId,
           companyCode,
           shift: { shiftId },
-        });
-      })
-      .then(item => {
-        console.error(item);
-        view.webContents.executeJavaScript(
-          `new Promise((resolve, reject) => {
-        const csrfToken = document.querySelector("meta[name='_csrf']").content;
-        fetch('https://www.tamgr.com/IBS/requestApproval', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
-          },
-          body: JSON.stringify(${item}),
-        }).then(response => {
-          resolve(response.json());
-        }).catch(error => {
-          reject(error);
-        });
-      });`,
-        );
-      })
-      .then(result => {
-        console.error(result);
-      })
-      .catch(error => {
-        console.error('Error: ', error);
-      });
-  });
-});
+          approvalCondition,
+        },
+      } = result;
+
+      return {
+        dailyAttendance: Object.assign({}, item.dailyAttendance, {
+          userId,
+          companyCode,
+          shift: { shiftId: +shiftId },
+        }),
+        approvalCondition,
+        requestType: item.requestType,
+      };
+    })
+    .then(item => {
+      return item.approvalCondition === 0
+        ? Promise.resolve(item.approvalCondition)
+        : view.webContents.executeJavaScript(
+            `new Promise((resolve, reject) => { 
+        console.error(${JSON.stringify(item)});
+    const csrfToken = document.querySelector("meta[name='_csrf']").content;
+    fetch('https://www.tamgr.com/IBS/requestApproval', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+      },
+      body: JSON.stringify(${JSON.stringify(item)}),
+    }).then(response => {
+      resolve(response.json());
+    }).catch(error => {
+      reject(error);
+    });
+  });`,
+          );
+    })
+    .then(result => {
+      console.error(result);
+    });

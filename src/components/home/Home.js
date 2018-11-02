@@ -163,7 +163,7 @@ class Home extends Component {
           breaktimes: [
             {
               breakTimeStart: breakTimeStart.getTime(),
-              breakTimeEnd: workEndTime.getTime(),
+              breakTimeEnd: breakTimeEnd.getTime(),
               serialNumber: 1,
             },
           ],
@@ -171,14 +171,15 @@ class Home extends Component {
             {
               loggedHours: [
                 {
+                  serialNumber: '1',
                   projectCode: this.state.projectCode || null,
                   taskId: this.state.middleTaskId || null,
                   taskDate: date.toJSON(),
                   newSerialNumber: 1,
                   upperTaskId: this.state.taskId || null,
-                  effort: (workEndTime - workStartTime) / 1000 / 60 - 60,
+                  effort: '' + ((workEndTime - workStartTime) / 1000 / 60 - 60),
                   remarks: '',
-                  changed: 'false',
+                  changed: 'true',
                 },
               ],
               projectCode: this.state.projectCode || null,
