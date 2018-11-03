@@ -38,18 +38,20 @@ function createView() {
     },
   });
   mainWindow.setBrowserView(view);
-  view.setBounds({ x: 0, y: 0, width: 700, height: 500 });
+  view.setBounds({ x: 0, y: 0, width: 700, height: 800 });
   view.webContents.loadURL('https://www.tamgr.com/IBS/login');
 
-  view.webContents.on('did-finish-load', () => {
-    // view.webContents.toggleDevTools();
-    resolver();
-  });
+  view.webContents.on('did-finish-load', resolver);
   view.webContents.on('did-navigate', (event, url) => {
     // After login
     if (url === 'https://www.tamgr.com/IBS/work-condition') {
       afterLogin();
       view.webContents.toggleDevTools();
+    }
+
+    // On Session timeout
+    if (url === 'https://www.tamgr.com/sessionTimeout') {
+      view.webContents.loadURL('https://www.tamgr.com/IBS/login');
     }
   });
 }
@@ -120,39 +122,48 @@ ipcMain.on('retrieve-daily-attendance-project-tasks', evenet => {
 
 // Request daily attendance
 ipcMain.on('request-daily-attendance', (event, data) => {
-  const promises = data.map(item => approve(item));
+  const _data = JSON.parse(JSON.stringify(data));
+  const promises = _data.map(item => approve(item));
 
-  Promise.all(promises)
-    .then(result => {
-      console.log(result);
-    })
-    .catch(error => {
-      console.error('Error: ', error);
-    })
-    .finally();
+  Promise.all(promises).then(results => {
+    mainWindow.webContents.send('request-result', results);
+  });
 });
 
 const approve = item =>
   view.webContents
     .executeJavaScript(
       `new Promise((resolve, reject) => {
-    const csrfToken = document.querySelector("meta[name='_csrf']").content;
-    fetch('https://www.tamgr.com/IBS/retrieveDailyAttendance', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': csrfToken,
-      },
-      body: JSON.stringify(new Date(${item.dailyAttendance.workDate})),
-    }).then(response => {
-      resolve(response.json());
-    }).catch(error => {
-      reject(error);
-    });
-  });`,
+        const csrfToken = document.querySelector("meta[name='_csrf']").content;
+        const postData = url => {
+          return fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify(new Date(${item.dailyAttendance.workDate})),
+          }).then(response => {
+            return response.json();
+          });
+        };
+      
+        const p1 = postData('https://www.tamgr.com/IBS/retrieveDailyAttendance');
+        const p2 = postData(
+          'https://www.tamgr.com/IBS/retrieveDailyAttendanceProjectTasks',
+        );
+      
+        Promise.all([p1, p2])
+          .then(results => {
+            resolve(results);
+          })
+          .catch(error => {
+            reject(error);
+          });
+      });`,
     )
-    .then(result => {
+    .then(([dailyAttendance, projectTasks]) => {
       const {
         dailyAttendance: {
           userId,
@@ -160,7 +171,21 @@ const approve = item =>
           shift: { shiftId },
           approvalCondition,
         },
-      } = result;
+      } = dailyAttendance;
+
+      const { projectTaskDetail } = projectTasks;
+      const isChanged = projectTaskDetail.some(task => {
+        const [projectAndTask] = item.dailyAttendance.projectsAndTasks;
+        return task.projectCode === projectAndTask.projectCode;
+      });
+      console.error(isChanged);
+
+      const [projectAndTasks] = item.dailyAttendance.projectsAndTasks;
+      const [loggedHour] = projectAndTasks.loggedHours;
+      if (isChanged) {
+        loggedHour.changed = 'true';
+        loggedHour.serialNumber = '1';
+      }
 
       return {
         dailyAttendance: Object.assign({}, item.dailyAttendance, {
@@ -173,8 +198,12 @@ const approve = item =>
       };
     })
     .then(item => {
-      return item.approvalCondition === 0
-        ? Promise.resolve(item.approvalCondition)
+      console.error(item.approvalCondition);
+      return item.approvalCondition !== '0'
+        ? Promise.resolve({
+            code: item.approvalCondition,
+            status: 'unmodified',
+          })
         : view.webContents.executeJavaScript(
             `new Promise((resolve, reject) => { 
         console.error(${JSON.stringify(item)});
@@ -188,7 +217,7 @@ const approve = item =>
       },
       body: JSON.stringify(${JSON.stringify(item)}),
     }).then(response => {
-      resolve(response.json());
+      resolve({ code: 2, status: 'new' });
     }).catch(error => {
       reject(error);
     });
@@ -196,5 +225,9 @@ const approve = item =>
           );
     })
     .then(result => {
+      return result;
+    })
+    .catch(result => {
       console.error(result);
+      return { code: 500 };
     });

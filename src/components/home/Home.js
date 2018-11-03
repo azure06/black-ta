@@ -1,21 +1,27 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
+import classNames from 'classnames';
 import InputLabel from '@material-ui/core/InputLabel';
 import { StyledButton } from './../styled-components/StyledComponents';
 import FormControl from '@material-ui/core/FormControl';
 import MenuItem from '@material-ui/core/MenuItem';
 import Select from '@material-ui/core/Select';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Button from '@material-ui/core/Button';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Timesheet from './Timesheet';
+import green from '@material-ui/core/colors/green';
 
 /* from app code, require('electron').remote calls back to main process */
 const electron = window.require('electron');
 const ipcRenderer = electron.ipcRenderer;
 const dialog = window.require('electron').remote.dialog;
 const XLSX = window.require('xlsx');
+const Store = window.require('electron-store');
+const store = new Store();
 
 const styles = theme => ({
   header: {
@@ -67,6 +73,21 @@ const styles = theme => ({
     width: '70vw',
     borderRadius: '5px',
   },
+
+  buttonSuccess: {
+    backgroundColor: green[500],
+    '&:hover': {
+      backgroundColor: green[700],
+    },
+  },
+  buttonProgress: {
+    color: green[500],
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -12,
+    marginLeft: -12,
+  },
 });
 
 class Home extends Component {
@@ -76,15 +97,31 @@ class Home extends Component {
     taskId: '',
     middleTaskId: '',
     lowerTaskId: '',
+    loading: false,
+    success: false,
     excelData: [],
   };
 
   componentDidMount(nextProps, nextState) {
+    const preferences = store.get('preferences');
+    if (preferences) {
+      this.setState(preferences);
+    }
+
     ipcRenderer.send('retrieve-daily-attendance-project-tasks', {});
     ipcRenderer.on('project-data', (event, data) => {
       console.error(data);
       this.setState({
         data,
+      });
+    });
+    ipcRenderer.on('request-result', (event, data) => {
+      console.error(data);
+      this.storePrefereces();
+      this.setState({
+        loading: false,
+        success: true,
+        loading: false,
       });
     });
   }
@@ -145,6 +182,27 @@ class Home extends Component {
     }, 0);
   };
 
+  handleButtonClick = () => {
+    if (!this.state.loading) {
+      this.setState({
+        success: false,
+        loading: true,
+      });
+      this.save();
+    }
+  };
+
+  storePrefereces = () => {
+    store.set({
+      preferences: {
+        projectCode: this.state.projectCode,
+        taskId: this.state.taskId,
+        middleTaskId: this.state.middleTaskId,
+        lowerTaskId: this.state.lowerTaskId,
+      },
+    });
+  };
+
   save = () => {
     const dailyAttendance = this.state.excelData.map(item => {
       const [date, workStartTime, workEndTime] = item;
@@ -171,7 +229,6 @@ class Home extends Component {
             {
               loggedHours: [
                 {
-                  serialNumber: '1',
                   projectCode: this.state.projectCode || null,
                   taskId: this.state.middleTaskId || null,
                   taskDate: date.toJSON(),
@@ -179,7 +236,7 @@ class Home extends Component {
                   upperTaskId: this.state.taskId || null,
                   effort: '' + ((workEndTime - workStartTime) / 1000 / 60 - 60),
                   remarks: '',
-                  changed: 'true',
+                  changed: 'false',
                 },
               ],
               projectCode: this.state.projectCode || null,
@@ -190,11 +247,16 @@ class Home extends Component {
       };
     });
 
+    console.error(dailyAttendance);
     ipcRenderer.send('request-daily-attendance', dailyAttendance);
   };
 
   render() {
     const { classes } = this.props;
+    const buttonClassname = classNames({
+      [classes.buttonSuccess]: success,
+    });
+    const { loading, success } = this.state;
     const { projectTaskReference } = this.state.data || {
       projectTaskReference: [],
     };
@@ -227,9 +289,18 @@ class Home extends Component {
             </StyledButton>
           </div>
           <div className={classes.btnRight}>
-            <StyledButton variant="contained" onClick={this.save}>
+            <Button
+              variant="contained"
+              color="primary"
+              className={buttonClassname}
+              disabled={loading}
+              onClick={this.handleButtonClick}
+            >
               Save
-            </StyledButton>
+            </Button>
+            {loading && (
+              <CircularProgress size={54} className={classes.buttonProgress} />
+            )}
           </div>
         </div>
         <div className={classes.mainContainer}>
@@ -305,7 +376,7 @@ class Home extends Component {
                 })}
               </Select>
             </FormControl>
-            <FormControl className={classes.formControl}>
+            {/* <FormControl className={classes.formControl}>
               <InputLabel htmlFor="subcategory-select">Sub-category</InputLabel>
               <Select
                 value={this.state.lowerTaskId}
@@ -326,7 +397,7 @@ class Home extends Component {
                   );
                 })}
               </Select>
-            </FormControl>
+            </FormControl> */}
           </form>
           <div className={classes.table}>
             <Timesheet excelData={this.state.excelData} />
