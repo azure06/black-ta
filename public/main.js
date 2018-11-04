@@ -38,7 +38,7 @@ function createView() {
     },
   });
   mainWindow.setBrowserView(view);
-  view.setBounds({ x: 0, y: 0, width: 700, height: 800 });
+  view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
   view.webContents.loadURL('https://www.tamgr.com/IBS/login');
 
   view.webContents.on('did-finish-load', resolver);
@@ -163,14 +163,10 @@ const approve = item =>
           });
       });`,
     )
-    .then(([dailyAttendance, projectTasks]) => {
+    .then(([attendance, projectTasks]) => {
+      const { dailyAttendance } = attendance;
       const {
-        dailyAttendance: {
-          userId,
-          companyCode,
-          shift: { shiftId },
-          approvalCondition,
-        },
+        shift: { shiftId },
       } = dailyAttendance;
 
       const { projectTaskDetail } = projectTasks;
@@ -178,8 +174,6 @@ const approve = item =>
         const [projectAndTask] = item.dailyAttendance.projectsAndTasks;
         return task.projectCode === projectAndTask.projectCode;
       });
-      console.error(isChanged);
-
       const [projectAndTasks] = item.dailyAttendance.projectsAndTasks;
       const [loggedHour] = projectAndTasks.loggedHours;
       if (isChanged) {
@@ -188,18 +182,20 @@ const approve = item =>
       }
 
       return {
-        dailyAttendance: Object.assign({}, item.dailyAttendance, {
-          userId,
-          companyCode,
-          shift: { shiftId: +shiftId },
-        }),
-        approvalCondition,
+        dailyAttendance: Object.assign(
+          {},
+          dailyAttendance,
+          item.dailyAttendance,
+          {
+            shift: { shiftId: +shiftId },
+          },
+        ),
+        approvalCondition: dailyAttendance.approvalCondition,
         requestType: item.requestType,
       };
     })
     .then(item => {
-      console.error(item.approvalCondition);
-      return item.approvalCondition !== '0'
+      return item.approvalCondition !== '0' && item.approvalCondition !== null
         ? Promise.resolve({
             code: item.approvalCondition,
             status: 'unmodified',

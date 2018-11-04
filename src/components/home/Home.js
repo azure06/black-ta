@@ -163,6 +163,7 @@ class Home extends Component {
         filteredArray.push(tmp);
       }
       this.setState({ excelData: filteredArray });
+      console.error(filteredArray);
     });
   };
 
