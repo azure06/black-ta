@@ -46,7 +46,7 @@ class App extends Component {
       <MuiThemeProvider theme={theme}>
         <BrowserRouter>
           <div>
-            <Navigation />
+            {/* <Navigation /> */}
             <Switch>
               <Route exact path="/home" render={props => <Home {...props} />} />
               <Route exact path="/signin" component={Signin} />
